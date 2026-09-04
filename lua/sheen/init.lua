@@ -143,16 +143,6 @@ function M.preview(path, o)
     end,
   })
   run_sheen(file)
-  if vim.fn.has("nvim-0.9") == 1 then
-    vim.api.nvim_create_autocmd("WinResized", {
-      group = vim.api.nvim_create_augroup("sheen_nvim_resize", { clear = false }),
-      callback = function(args)
-        if preview_win and vim.tbl_contains(args.data.windows or {}, preview_win) then
-          schedule_rerender()
-        end
-      end,
-    })
-  end
 
   if popts.keep_focus and vim.api.nvim_win_is_valid(prev_win) then
     focus_restore_pending = true
@@ -187,6 +177,17 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("Sheen", function(o)
     M.preview(o.args ~= "" and o.args or nil)
   end, { nargs = "?", desc = "Preview HTML in sheen" })
+
+  if vim.fn.has("nvim-0.9") == 1 then
+    vim.api.nvim_create_autocmd("WinResized", {
+      group = vim.api.nvim_create_augroup("sheen_nvim_resize", { clear = true }),
+      callback = function(args)
+        if preview_win and args.data and vim.tbl_contains(args.data.windows or {}, preview_win) then
+          schedule_rerender()
+        end
+      end,
+    })
+  end
 
   if config.auto_open then
     local group = vim.api.nvim_create_augroup("sheen_nvim_auto", { clear = true })
