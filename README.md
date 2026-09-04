@@ -38,6 +38,7 @@ require("sheen").setup({
   width_ratio = 0.8,         -- float width / pane width as a ratio of columns
   height_ratio = 0.85,       -- float height as a ratio of lines
   auto_open = true,          -- open the preview whenever an HTML file loads
+  style = nil,               -- sheen style: "dark", "light", "notty", "ascii" (nil follows &background)
   keymaps = {
     preview = "<leader>ch",  -- open preview for current file
     close = "q",             -- close the preview window

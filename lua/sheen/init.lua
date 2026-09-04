@@ -8,6 +8,7 @@ local defaults = {
   width_ratio = 0.8,
   height_ratio = 0.85,
   auto_open = true,
+  style = nil, -- sheen style: "dark", "light", "notty", "ascii"; nil follows &background
   keymaps = {
     preview = "<leader>ch",
     close = "q",
@@ -20,6 +21,7 @@ local preview_buf = nil
 local last_file = nil
 local job_id = nil
 local resize_pending = false
+local focus_restore_pending = false
 
 local function is_html(file)
   return vim.bo.filetype == "html" or file:match("%.html$") or file:match("%.htm$")
@@ -53,7 +55,8 @@ local function run_sheen(file)
     return
   end
   last_file = file
-  local args = { M.config.cmd, "-w", tostring(render_width()), file }
+  local style = M.config.style or (vim.o.background == "light" and "light" or "dark")
+  local args = { M.config.cmd, "-s", style, "-w", tostring(render_width()), file }
   local opts = {
     stdout_buffered = true,
     on_stdout = function(_, data)
@@ -152,7 +155,24 @@ function M.preview(path, o)
   end
 
   if popts.keep_focus and vim.api.nvim_win_is_valid(prev_win) then
+    focus_restore_pending = true
     vim.api.nvim_set_current_win(prev_win)
+  end
+
+  vim.api.nvim_create_autocmd("WinLeave", {
+    buffer = buf,
+    callback = function()
+      if focus_restore_pending then
+        return
+      end
+      vim.schedule(close_preview)
+    end,
+  })
+
+  if focus_restore_pending then
+    vim.schedule(function()
+      focus_restore_pending = false
+    end)
   end
 end
 
