@@ -22,12 +22,22 @@ local last_file = nil
 local job_id = nil
 local resize_pending = false
 local focus_restore_pending = false
+local close_map_installed = false
 
 local function is_html(file)
   return vim.bo.filetype == "html" or file:match("%.html$") or file:match("%.htm$")
 end
 
+local function remove_global_close()
+  if not close_map_installed then
+    return
+  end
+  close_map_installed = false
+  pcall(vim.keymap.del, "n", M.config.keymaps.close)
+end
+
 local function close_preview()
+  remove_global_close()
   if job_id then
     pcall(vim.fn.jobstop, job_id)
     job_id = nil
@@ -37,6 +47,29 @@ local function close_preview()
   end
   preview_win = nil
   preview_buf = nil
+end
+
+-- While the preview is open, the close key works from anywhere; it is
+-- removed on close so it never shadows the key outside the popup.
+local function has_global_mapping(key)
+  local lhs = vim.api.nvim_replace_termcodes(key, true, false, true)
+  for _, map in ipairs(vim.api.nvim_get_keymap("n")) do
+    if map.lhs == lhs then
+      return true
+    end
+  end
+  return false
+end
+
+local function install_global_close()
+  if close_map_installed or has_global_mapping(M.config.keymaps.close) then
+    return
+  end
+  close_map_installed = true
+  vim.keymap.set("n", M.config.keymaps.close, close_preview, {
+    silent = true,
+    desc = "Close sheen preview",
+  })
 end
 
 local function render_width()
@@ -143,19 +176,25 @@ function M.preview(path, o)
     end,
   })
   run_sheen(file)
+  install_global_close()
 
   if popts.keep_focus and vim.api.nvim_win_is_valid(prev_win) then
     focus_restore_pending = true
     vim.api.nvim_set_current_win(prev_win)
   end
 
+  local win = preview_win
   vim.api.nvim_create_autocmd("WinLeave", {
     buffer = buf,
     callback = function()
       if focus_restore_pending then
         return
       end
-      vim.schedule(close_preview)
+      vim.schedule(function()
+        if preview_win == win and vim.api.nvim_win_is_valid(win) then
+          close_preview()
+        end
+      end)
     end,
   })
 
