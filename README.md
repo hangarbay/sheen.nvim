@@ -6,6 +6,8 @@ Neovim integration for sheen, the terminal HTML renderer.
 
 - **Floating preview** of the current HTML file, rendered by sheen (vertical pane optional)
 - **Auto-open** HTML files with the preview pane, without stealing focus
+- **Scrollable & searchable** -- the preview is a real buffer: mouse-wheel it, `/` search it, yank from it
+- **True-color ANSI rendering** -- sheen's output is snapshotted with its ANSI styling intact
 - **Width-aware rendering** -- sheen re-renders at the pane width when you resize it
 - **`q` to close** the preview window
 - **Optional file argument** -- preview any HTML file from anywhere

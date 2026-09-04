@@ -1,5 +1,7 @@
 local M = {}
 
+local ansi = require("sheen.ansi")
+
 local defaults = {
   cmd = vim.fn.exepath("sheen") ~= "" and vim.fn.exepath("sheen") or "sheen",
   direction = "float",
@@ -47,13 +49,26 @@ local function run_sheen(file)
     pcall(vim.fn.jobstop, job_id)
     job_id = nil
   end
+  if not (preview_buf and vim.api.nvim_buf_is_valid(preview_buf)) then
+    return
+  end
   last_file = file
   local args = { M.config.cmd, "-w", tostring(render_width()), file }
-  if vim.fn.has("nvim-0.11") == 1 then
-    job_id = vim.fn.jobstart(args, { term = true })
-  else
-    job_id = vim.fn.termopen(args)
+  local opts = {
+    stdout_buffered = true,
+    on_stdout = function(_, data)
+      ansi.render(preview_buf, data)
+    end,
+    on_exit = function()
+      job_id = nil
+    end,
+  }
+  -- sheen treats a piped stdin as the document; detach it so the file argument wins
+  local ok, job = pcall(vim.fn.jobstart, args, vim.tbl_extend("force", opts, { stdin = "null" }))
+  if not ok then
+    job = vim.fn.jobstart(args, opts)
   end
+  job_id = job
 end
 
 local function open_window()
